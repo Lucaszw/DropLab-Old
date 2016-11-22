@@ -6,10 +6,11 @@ var del = require('del');
 var dest = require('gulp-dest');
 var size = require('gulp-size');
 
+var scripts = ['./project/static/scripts/jsx/**/*.jsx'];
 
 // tasks
 gulp.task('transform', function () {
-  var stream = gulp.src('./project/static/scripts/jsx/*.jsx')
+  var stream = gulp.src(scripts)
     .pipe(gulpBrowser.browserify({transform: ['reactify']}))
     .on('error', swallowError)
     .pipe(dest('./project/static/scripts/js/', {ext: '.js'}))
@@ -24,7 +25,7 @@ gulp.task('del', function () {
 
 gulp.task('default', ['del'], function () {
   gulp.start('transform');
-  gulp.watch('./project/static/scripts/jsx/*.jsx', ['transform']);
+  gulp.watch('./project/static/scripts/jsx/**/*.jsx', ['transform']);
 });
 
 function swallowError (error) {

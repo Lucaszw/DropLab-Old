@@ -15,6 +15,7 @@
     "bootstrap": "^3.3.7",
     "react": "^15.3.2",
     "three.js": "threejs#*",
-    "fabric.js": "fabric#^1.6.6"
+    "fabric.js": "fabric#^1.6.6",
+    "pathfinding": "^0.4.18"
   }
 }

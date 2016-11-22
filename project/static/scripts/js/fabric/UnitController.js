@@ -2584,208 +2584,54 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
 }
 
 },{}],9:[function(require,module,exports){
-var ThreeObjects  = require('./threeObjects.jsx');
-var FabricObjects = require('./fabricObjects.jsx');
+var Objects = require('/Users/lucaszw/Desktop/DropLab2/project/static/scripts/jsx/fabric/Objects.jsx');
+var Colormap = require('colormap');
 
 const NOT_PRESENT = -1;
-const EMPTY = undefined;
-const UNIT = 3;
-
-function GenerateMatrix(n) {
-  let matrix = new Array(n);
-  for (let i=0;i < n;i++){
-    matrix[i] = new Array(n);
-    for (let ii=0; ii < n; ii++)
-      matrix[i][ii] = 0;
-  }
-  return matrix;
-}
-
-class Main extends React.Component {
-
-  constructor (props) {
-    super(props);
-
-    this.state = {
-      matrix: GenerateMatrix(20),
-      units: new Array(),
-      path: new Array()
-    }
-
-    // Event Binders:
-    this.handleUpdateMatrix = this.handleUpdateMatrix.bind(this);
-    this.handleUpdateUnits = this.handleUpdateUnits.bind(this);
-    this.handleGeneratePaths = this.handleGeneratePaths.bind(this);
-  }
-
-  handleGeneratePaths () {
-    let unit = this.state.units[0];
-    var grid   = new PF.Grid(this.state.matrix);
-    var finder = new PF.AStarFinder({allowDiagonal: true});
-
-    // let paths = this.state.paths;
-    let path = finder.findPath(unit.y, unit.x, unit.y2, unit.x2, grid);
-    path.needsDrawing = true;
-
-    this.setState({path: path});
-    // this.paths.push();
-  }
-
-  handleUpdateMatrix(matrix){this.setState({matrix: matrix})};
-  handleUpdateUnits(units){this.setState({units: units})};
-
-  render () {
-
-    const navStyle = {
-      position: "absolute",
-      left: "100%",
-      marginLeft: "-200px",
-      height: "100%"
-    };
-
-
-    return (
-      React.createElement("div", null, 
-        React.createElement(GridSystem2D, {
-          updateMatrix: this.handleUpdateMatrix, 
-          updateUnits: this.handleUpdateUnits, 
-          matrix: this.state.matrix, 
-          units: this.state.units, 
-          path: this.state.path}
-          ), 
-        React.createElement("div", {style: navStyle}, 
-          React.createElement(ComponentNavigation, {
-            generatePaths: this.handleGeneratePaths}
-            )
-        )
-      )
-    );
-
-  }
-}
-
-class GridSystem2D extends React.Component {
-  constructor (props) {
-    super (props);
-
-    let gridTextureDimensions = {
-      height: 500,
-      width: 500
-    };
-
-    this.state = {
-      gridTextureCanvas: null,
-      gridTextureDimensions: gridTextureDimensions,
-      activeCoordinates: {x: 0, y: 0}
-    }
-
-    // Event Binders:
-    this.handleGridTextureCanvasChanged = this.handleGridTextureCanvasChanged.bind(this);
-    this.handleActiveCoordinatesChanged = this.handleActiveCoordinatesChanged.bind(this);
-    this.handleUpdateObstacles = this.handleUpdateObstacles.bind(this);
-    this.handleUpdateUnit = this.handleUpdateUnit.bind(this);
-    this.handleUpdateGoal = this.handleUpdateGoal.bind(this);
-
-  }
-
-  handleGridTextureCanvasChanged (canvas) { this.setState({gridTextureCanvas: canvas}) }
-  handleActiveCoordinatesChanged (x,y) { this.setState({activeCoordinates: {x: x,y: y}})}
-
-  handleUpdateObstacles (coords,val) {
-    let matrix = this.props.matrix;
-    matrix[coords.x][coords.y] = val;
-    this.props.updateMatrix(matrix);
-  }
-
-  handleUpdateUnit (unit,index,value) {
-    let units = this.props.units;
-
-    unit.value = value;
-    unit.hasGoal = false;
-
-    if (index == NOT_PRESENT) units.push(unit);
-    if (value == EMPTY) units[index] = unit;
-
-    this.props.updateUnits(units);
-  }
-
-  handleUpdateGoal (coords,index,value) {
-    let units = this.props.units;
-    let unit  = this.props.units[index];
-
-    if (value == EMPTY) {unit.hasGoal = false;}
-    else if(unit.hasGoal) {return}
-    else {
-      unit.x2 = coords.x;
-      unit.y2 = coords.y;
-      unit.hasGoal = true;
-    }
-
-    this.props.updateUnits(units);
-  }
-
-  render () {
-    return (
-      React.createElement("div", null, 
-        React.createElement(FabricObjects.Grid, React.__spread({
-          setCanvas: this.handleGridTextureCanvasChanged, 
-          updateActiveCoordinates: this.handleActiveCoordinatesChanged, 
-          updateObstacles: this.handleUpdateObstacles, 
-          updateUnit: this.handleUpdateUnit, 
-          updateGoal: this.handleUpdateGoal, 
-          dimensions: this.state.gridTextureDimensions, 
-          activeCoordinates: this.state.activeCoordinates}, 
-          this.props)
-           )
-      )
-    )
-  }
-}
-
-class ComponentNavigation extends React.Component {
-  constructor (props) {
-    super (props);
-  }
-
-  render () {
-    const style = {
-      width: "200px",
-      background: "rgba(255,255,255,0.5)",
-      height: "100%",
-      textAlign: "center"
-    };
-
-    return (
-      React.createElement("div", {style: style}, 
-        React.createElement("button", {onClick: this.props.generatePaths}, "Calculate Path")
-      )
-    );
-  }
-
-}
-
-ReactDOM.render(
-  React.createElement(Main, null),
-  document.getElementById('main')
-);
-
-},{"./fabricObjects.jsx":15,"./threeObjects.jsx":16}],10:[function(require,module,exports){
+const HOVER    = 0;
 const EMPTY    = undefined;
-const GOAL     = 4;
-
-var Objects = require('/Users/lucaszw/Desktop/DropLab2/project/static/scripts/jsx/fabric/Objects.jsx');
+const UNIT     = 3;
 
 class Controller {
-  constructor (grid){
+  constructor (grid) {
     this.grid = grid;
+
+    this.colors = Colormap({
+      colormap: 'jet',
+      nshades: 21,
+      format: 'hex',
+      alpha: 1
+    });
+
   }
 
-  draw (coords, index){
-    let obj = this.grid.objects[coords.x][coords.y] = new Objects.Goal({
+  activate (coords){
+    this.deactivateAll();
+    const obj = this.grid.getObject(coords);
+    obj.addHighlight();
+    this.grid.setState({mode: HOVER, activeUnit: obj.getName()});
+  }
+
+  deactivateAll () {
+    const grid = this.grid;
+
+    grid.objects.forEach(function(row,x){
+      row.forEach(function(obj,y){
+        const coords = {x: x, y: y};
+        if (grid.isEmpty(coords)) return;
+        if (obj.getType() == UNIT) obj.removeHighlight();
+      });
+    });
+
+  }
+
+  draw (coords,index) {
+    let obj = this.grid.objects[coords.x][coords.y] = new Objects.Unit({
         x: coords.x*this.grid.size,
         y: coords.y*this.grid.size,
         width: this.grid.size,
         canvas: this.grid.canvas,
+        background: this.colors[index],
         name: index.toString()
       });
 
@@ -2794,22 +2640,46 @@ class Controller {
 
   erase (coords) {
     const index = this.grid.getObject(coords).getName();
-    this.grid.props.updateGoal(coords,index,EMPTY);
+    this.grid.props.updateUnit(coords,index,EMPTY);
   }
 
-  place (coords){
-    let index = this.grid.state.activeUnit;
-    if (index == EMPTY ) return false;
-
-    this.grid.props.updateGoal(coords,index, GOAL);
+  place (coords) {
+    if (!this.grid.isEmpty(coords)) return;
+    this.grid.props.updateUnit(coords,NOT_PRESENT,UNIT);
   }
 
-  type (){return GOAL}
+  type () {return UNIT}
+
+  updateAll () {
+    let grid = this.grid;
+    let self = this;
+    grid.props.units.forEach(function(unit,index){
+
+      if (grid.isEmpty(unit))
+        self.draw(unit,index);
+
+      if (!grid.isEmpty(unit) && unit.value == EMPTY)
+        grid.removeObject (unit);
+
+      if (!unit.hasGoal && unit.x2 != EMPTY)
+        grid.removeObject({x: unit.x2, y: unit.y2});
+
+      if (!unit.hasGoal) return;
+
+      let goal = {x: unit.x2, y: unit.y2};
+
+      if (grid.isEmpty(goal))
+        grid.GoalController.draw(goal,index);
+
+    });
+  }
+
 
 }
+
 module.exports = {Controller: Controller};
 
-},{"/Users/lucaszw/Desktop/DropLab2/project/static/scripts/jsx/fabric/Objects.jsx":11}],11:[function(require,module,exports){
+},{"/Users/lucaszw/Desktop/DropLab2/project/static/scripts/jsx/fabric/Objects.jsx":10,"colormap":7}],10:[function(require,module,exports){
 const NOT_PRESENT = -1;
 const EMPTY    = undefined;
 const HOVER    = 0;
@@ -2945,557 +2815,5 @@ class Goal extends Unit {
 }
 
 module.exports = {FabricObject: FabricObject, Circle: Circle, Box: Box, Unit: Unit, Goal: Goal};
-
-},{}],12:[function(require,module,exports){
-var Objects = require('/Users/lucaszw/Desktop/DropLab2/project/static/scripts/jsx/fabric/Objects.jsx');
-
-const OBSTACLE = 1;
-const UNIT = 3;
-
-class Controller {
-
-  constructor (grid) {
-    this.grid = grid;
-  }
-
-  erase (coords) {this.grid.props.updateObstacles(coords,0);}
-
-  draw (coords) {
-    let obj = this.grid.objects[coords.x][coords.y] = new Objects.Box({
-        x: coords.x*this.grid.size,
-        y: coords.y*this.grid.size,
-        width: this.grid.size,
-        canvas: this.grid.canvas,
-        background: 'rgb(200, 200, 200)'
-      });
-
-    obj.draw();
-
-  }
-
-  place (coords) {
-    if (!this.grid.isEmpty(coords)) return;
-
-    // If can't remove then highlight unit
-    if (!this.tryRemoving(coords)){
-      this.grid.activateUnit(coords);
-      return false;
-    }
-    // this.setState({mode: HOVER});
-    this.grid.props.updateObstacles(coords,1);
-  }
-
-  tryRemoving (coords) {
-    // Object can't be overwritten (currently only units):
-    if (this.grid.getType(coords) == UNIT) return false;
-    // Can remove:
-    this.grid.removeObject(coords);
-    return true;
-  }
-
-  type () { return OBSTACLE; }
-
-  update () {
-    const n = this.grid.props.matrix.length;
-    const m = this.grid.props.matrix[0].length;
-
-    for (let i = 0; i < n; i++){
-      for (let ii = 0; ii < m ; ii++){
-        let coords = {x: i, y: ii};
-
-        if (this.grid.props.matrix[i][ii] == 1 && this.grid.isEmpty(coords))
-          this.draw (coords);
-
-        if (this.grid.props.matrix[i][ii] == 0 && this.grid.getType(coords) == OBSTACLE)
-          this.grid.removeObject (coords);
-
-      }
-    }
-  }
-
-}
-
-module.exports = {Controller: Controller};
-
-},{"/Users/lucaszw/Desktop/DropLab2/project/static/scripts/jsx/fabric/Objects.jsx":11}],13:[function(require,module,exports){
-var Objects = require('/Users/lucaszw/Desktop/DropLab2/project/static/scripts/jsx/fabric/Objects.jsx');
-
-class Controller {
-  constructor (grid){
-    this.grid = grid;
-  }
-
-  erase () {
-    const n = this.grid.pathPoints.length;
-    for (let i = 0; i< n; i++){
-      let point = this.grid.pathPoints.pop();
-      this.grid.canvas.remove(point.getObject());
-    }
-  }
-
-  draw (path) {
-    let grid = this.grid;
-
-    this.erase();
-    path.forEach(function (coords){
-
-      let x = coords[1];
-      let y = coords[0];
-
-      let obj = new Objects.Circle({
-          x: x * grid.size,
-          y: y * grid.size,
-          width: grid.size,
-          canvas: grid.canvas,
-          background: 'rgb(200, 200, 200)'
-        });
-
-      grid.pathPoints.push(obj);
-
-      obj.draw();
-
-    });
-
-    path.needsDrawing = false;
-
-  }
-}
-
-module.exports = {Controller: Controller};
-
-},{"/Users/lucaszw/Desktop/DropLab2/project/static/scripts/jsx/fabric/Objects.jsx":11}],14:[function(require,module,exports){
-var Objects = require('/Users/lucaszw/Desktop/DropLab2/project/static/scripts/jsx/fabric/Objects.jsx');
-var Colormap = require('colormap');
-
-const NOT_PRESENT = -1;
-const HOVER    = 0;
-const EMPTY    = undefined;
-const UNIT     = 3;
-
-class Controller {
-  constructor (grid) {
-    this.grid = grid;
-
-    this.colors = Colormap({
-      colormap: 'jet',
-      nshades: 21,
-      format: 'hex',
-      alpha: 1
-    });
-
-  }
-
-  activate (coords){
-    this.deactivateAll();
-    const obj = this.grid.getObject(coords);
-    obj.addHighlight();
-    this.grid.setState({mode: HOVER, activeUnit: obj.getName()});
-  }
-
-  deactivateAll () {
-    const grid = this.grid;
-
-    grid.objects.forEach(function(row,x){
-      row.forEach(function(obj,y){
-        const coords = {x: x, y: y};
-        if (grid.isEmpty(coords)) return;
-        if (obj.getType() == UNIT) obj.removeHighlight();
-      });
-    });
-
-  }
-
-  draw (coords,index) {
-    let obj = this.grid.objects[coords.x][coords.y] = new Objects.Unit({
-        x: coords.x*this.grid.size,
-        y: coords.y*this.grid.size,
-        width: this.grid.size,
-        canvas: this.grid.canvas,
-        background: this.colors[index],
-        name: index.toString()
-      });
-
-    obj.draw();
-  }
-
-  erase (coords) {
-    const index = this.grid.getObject(coords).getName();
-    this.grid.props.updateUnit(coords,index,EMPTY);
-  }
-
-  place (coords) {
-    if (!this.grid.isEmpty(coords)) return;
-    this.grid.props.updateUnit(coords,NOT_PRESENT,UNIT);
-  }
-
-  type () {return UNIT}
-
-  updateAll () {
-    let grid = this.grid;
-    let self = this;
-    grid.props.units.forEach(function(unit,index){
-
-      if (grid.isEmpty(unit))
-        self.draw(unit,index);
-
-      if (!grid.isEmpty(unit) && unit.value == EMPTY)
-        grid.removeObject (unit);
-
-      if (!unit.hasGoal && unit.x2 != EMPTY)
-        grid.removeObject({x: unit.x2, y: unit.y2});
-
-      if (!unit.hasGoal) return;
-
-      let goal = {x: unit.x2, y: unit.y2};
-
-      if (grid.isEmpty(goal))
-        grid.GoalController.draw(goal,index);
-
-    });
-  }
-
-
-}
-
-module.exports = {Controller: Controller};
-
-},{"/Users/lucaszw/Desktop/DropLab2/project/static/scripts/jsx/fabric/Objects.jsx":11,"colormap":7}],15:[function(require,module,exports){
-const EMPTY    = undefined;
-const HOVER    = 0;
-const ERASE    = 2;
-
-var Objects = require('./fabric/Objects.jsx');
-var ObstacleController = require('./fabric/ObstacleController.jsx');
-var UnitController = require('./fabric/UnitController.jsx');
-var GoalController = require('./fabric/GoalController.jsx');
-var PathController = require('./fabric/PathController.jsx');
-
-
-class Grid extends React.Component {
-  // Generate a texture for grid plane:
-  constructor (props) {
-    super (props);
-
-    this.mouseMove = this.mouseMove.bind(this);
-    this.mouseUp   = this.mouseUp.bind(this);
-    this.mouseDown = this.mouseDown.bind(this);
-
-    this.canvas     = null;
-    this.objects    = new Array();
-    this.pathPoints = new Array();
-    this.size       = props.dimensions.width / props.matrix.length;
-    this.state = {mode: HOVER, activeUnit: EMPTY};
-
-    this.ObstacleController = new ObstacleController.Controller(this);
-    this.UnitController     = new UnitController.Controller(this);
-    this.GoalController     = new GoalController.Controller(this);
-    this.PathController     = new PathController.Controller(this);
-
-  }
-
-  mouseUp () {this.setState({mode: HOVER})}
-
-  mouseDown (ev){
-    if (ev.e.altKey)
-      this.setState({mode: ERASE});
-    else if (ev.e.shiftKey)
-      this.setState({mode: this.UnitController.type()});
-    else if (ev.e.metaKey)
-      this.setState({mode: this.GoalController.type()});
-    else
-      this.setState({mode: this.ObstacleController.type()});
-  }
-
-  mouseMove (ev){
-    let x = Math.floor(ev.e.offsetX / this.size);
-    let y = Math.floor(ev.e.offsetY / this.size);
-    this.props.updateActiveCoordinates(x,y);
-  }
-
-  getObject (coords){
-    let obj = this.objects[coords.x][coords.y];
-    return obj;
-  }
-
-  getType (coords){
-    if (this.isEmpty(coords)) return EMPTY;
-    return this.getObject(coords).getType();
-  }
-
-  isEmpty   (coords) {return this.getObject(coords) == EMPTY}
-  clearGrid (coords) {this.objects[coords.x][coords.y] = EMPTY}
-
-  erase (coords) {
-    switch (this.getType(coords)) {
-      case this.ObstacleController.type():
-        this.ObstacleController.erase(coords)
-        break;
-      case this.UnitController.type():
-        this.UnitController.erase(coords)
-        break;
-      case this.GoalController.type():
-        this.GoalController.erase(coords)
-        break;
-      default:
-        return;
-    }
-  }
-
-  removeObject (coords) {
-    if (!this.isEmpty(coords))
-      this.canvas.remove(this.getObject(coords).getObject());
-    this.clearGrid(coords);
-  }
-
-  update (coords) {
-    switch (this.getType(coords)){
-      case EMPTY:
-        this.ObstacleController.place(coords);
-        break;
-      case this.UnitController.type():
-        this.UnitController.activate(coords);
-        break;
-      default:
-        break;
-    }
-  }
-
-  setGrid () {
-    const grid   = this.size;
-    const width  = this.props.dimensions.width;
-    const height = this.props.dimensions.height;
-
-    this.canvas.setWidth(width);
-    this.canvas.setHeight(height);
-    this.canvas.backgroundColor = "white";
-
-    for (let i = 0; i < (width / grid); i++) {
-      this.canvas.add(new fabric.Line([ i * grid, 0, i * grid, width], { stroke: '#bbbbbb', selectable: false }));
-      this.canvas.add(new fabric.Line([ 0, i * grid, width, i * grid], { stroke: '#bbbbbb', selectable: false }));
-
-      this.objects.push(new Array(Math.ceil(height/grid)));
-    }
-
-  }
-
-  componentDidMount () {
-    this.canvas  = new fabric.Canvas(this.refs.fabric_canvas, {
-      selection: false
-    });
-
-    this.props.setCanvas(this.refs.fabric_canvas);
-    this.setGrid();
-
-    this.canvas.on('mouse:move', this.mouseMove);
-    this.canvas.on('mouse:up', this.mouseUp);
-    this.canvas.on('mouse:down', this.mouseDown);
-  }
-
-  componentDidUpdate () {
-    const coords = this.props.activeCoordinates;
-
-    if (this.state.mode == this.ObstacleController.type())
-      this.update(coords);
-
-    if (this.state.mode == ERASE)
-      this.erase(coords);
-
-    if (this.state.mode == this.UnitController.type())
-      this.UnitController.place(coords);
-
-    if (this.state.mode == this.GoalController.type())
-      this.GoalController.place(coords);
-
-    if (this.props.path.needsDrawing)
-      this.PathController.draw(this.props.path);
-
-    // TODO: Change to only update units if they need drawing
-    this.UnitController.updateAll();
-    this.ObstacleController.update();
-  }
-
-  render () {
-    const canvasStyle = {
-      position: "absolute",
-      border: "1px solid"
-    };
-
-    return (
-      React.createElement("div", {style: canvasStyle}, 
-        React.createElement("canvas", {ref: "fabric_canvas"})
-      )
-    )
-  }
-
-}
-
-module.exports = {Grid: Grid};
-
-},{"./fabric/GoalController.jsx":10,"./fabric/Objects.jsx":11,"./fabric/ObstacleController.jsx":12,"./fabric/PathController.jsx":13,"./fabric/UnitController.jsx":14}],16:[function(require,module,exports){
-class Canvas extends React.Component {
-  constructor(props){
-    super(props);
-
-    // Initiate Scene, Camera, and Renderer:
-    this.scene    = new THREE.Scene();
-    this.scene.background = new THREE.Color( 0xf4f4f4 );
-
-    this.camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 10000 );
-    this.camera.position.set( 500, 1100, 1500 );
-    this.camera.lookAt( new THREE.Vector3() );
-
-    this.renderer = new THREE.WebGLRenderer({ antialias: true });
-    this.renderer.setClearColor( 0xf0f0f0 );
-    this.renderer.setPixelRatio( window.devicePixelRatio );
-    this.renderer.setSize( window.innerWidth, window.innerHeight );
-
-    this.mouse = new THREE.Vector2();
-    this.raycaster = new THREE.Raycaster();
-    this.collidableObjects = new Array();
-
-    this.handleMouseMove = this.handleMouseMove.bind(this);
-  }
-
-  componentDidMount() {
-    // Append Renderer to Component:
-    this.refs.container.appendChild(this.renderer.domElement);
-
-    this.lights = new Lights({scene: this.scene});
-    this.lights.addToScene();
-
-    this.plane = new Plane({scene: this.scene});
-    this.plane.addToScene();
-
-    this.box = new Box({scene: this.scene, size: 200});
-    this.box.addToScene();
-
-    this.renderer.render( this.scene, this.camera );
-    this.animate();
-
-    // Add objects that can collide with ray caster:
-    this.collidableObjects.push(this.plane.getObject());
-  }
-
-  componentDidUpdate() {
-    const x = this.props.activeCoordinates.x;
-    const z = this.props.activeCoordinates.z;
-    this.plane.updateTexture(this.props.gridTextureCanvas);
-    this.box.updatePosition(x,100,z);
-  }
-
-  animate() {
-    var self = this;
-    requestAnimationFrame( function(){self.animate(self)} );
-
-    // this.plane.render();
-    // Render Scene:
-    this.renderer.render(this.scene, this.camera);
-  }
-
-  castRay (x,y) {
-    this.mouse.set(x,y);
-    this.raycaster.setFromCamera(this.mouse,this.camera);
-
-    let intersects = this.raycaster.intersectObjects( this.collidableObjects );
-
-    if (intersects.length > 0){
-      const uv = intersects[ 0 ].uv;
-      const point = intersects[0].point;
-
-      this.props.changeActiveCoordinates(uv,point);
-
-    }
-
-  }
-
-  handleMouseMove(e) {
-    const x = e.nativeEvent.offsetX;
-    const y = e.nativeEvent.offsetY;
-    const w = this.refs.container.clientWidth;
-    const h = this.refs.container.clientHeight;
-
-    this.castRay(
-      +1*( x / w ) * 2 - 1,
-      -1*( y / h ) * 2 + 1
-    );
-
-  }
-
-  render() {
-    return React.createElement("div", {ref: "container", onMouseMove: this.handleMouseMove})
-  }
-}
-
-class ThreeObject {
-  constructor(props){
-    this.scene    = props.scene;
-    this.camera   = props.camera;
-    this.renderer = props.renderer;
-    this.size     = props.size;
-  }
-
-  addToScene () { this.scene.add( this.obj ) }
-  getObject ()  { return this.obj }
-
-};
-
-class Lights extends ThreeObject {
-  constructor (props) {
-    super (props);
-    this.ambientLight = new THREE.AmbientLight( 0x606060 );
-    this.directionalLight = new THREE.DirectionalLight( 0xffffff , 1);
-    this.directionalLight.position.set( 1, 0.75, 0.5 );
-  }
-
-  addToScene () {
-    this.scene.add( this.ambientLight );
-    this.scene.add( this.directionalLight );
-  }
-};
-
-class Plane extends ThreeObject {
-  constructor (props) {
-    super (props);
-    const size = 2000, step = 50;
-    const geometry = new THREE.PlaneGeometry( size, size );
-
-    let material = new THREE.MeshPhongMaterial();
-
-    this.texture = new THREE.Texture();
-
-    this.obj = new THREE.Mesh( geometry, material );
-    this.obj.rotation.set(-Math.PI/2, 0, 0);
-  }
-
-  updateTexture(canvas) {
-    this.texture = new THREE.Texture(canvas);
-    this.texture.needsUpdate  = true;
-
-    let material = this.obj.material;
-    material.map = this.texture;
-    material.color.setHex(0xffffff);
-    material.needsUpdate = true;
-  }
-
-  render() { this.texture.needsUpdate = true }
-
-};
-
-class Box extends ThreeObject {
-  constructor(props){
-    super(props);
-    this.geometry = new THREE.BoxGeometry( this.size, this.size, this.size );
-    this.material = new THREE.MeshPhongMaterial( { color: 0xffffff } );
-    this.obj = new THREE.Mesh( this.geometry, this.material );
-    this.obj.position.set(-950,60,-925);
-  }
-
-  updatePosition(x,y,z){
-    this.obj.position.set(x,y,z);
-  }
-
-};
-
-module.exports = {Canvas: Canvas, Box: Box, Lights: Lights, Plane: Plane};
 
 },{}]},{},[9]);
