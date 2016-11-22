@@ -15,3 +15,9 @@ Install Python , Node JS, and Bower Dependencies:
 Start with run.sh:
 
     sh run.sh
+
+# Editing
+
+Use gulp to apply changes (I recommend running from inside your text editor using a terminal package)
+
+    gulp default
